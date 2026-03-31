@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>Pregled Seznama</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Specifični dodatki za to stran */
+        .task-item {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 8px solid #007bff; /* Modra za aktivne */
+        }
+
+        /* Ko je checkbox znotraj li-ja označen, spremenimo izgled cele vrstice */
+        .task-item:has(input:checked) {
+            opacity: 0.5; /* Zasenčenje cele vrstice */
+            border-left-color: #adb5bd; /* Siva barva roba */
+            background-color: #f8f9fa;
+        }
+
+        .task-item input[type="checkbox"] {
+            width: 25px;
+            height: 25px;
+            margin-right: 20px;
+            cursor: pointer;
+            accent-color: #28a745; /* Zelena kljukica */
+        }
+
+        .task-text {
+            font-size: 1.4rem;
+            font-weight: 600;
+            flex-grow: 1;
+            transition: color 0.3s ease;
+        }
+
+        /* Prečrtanje besedila samo, ko je označeno */
+        input:checked + .task-text {
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="nav-link">← Nazaj na vse sezname</a>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h2 id="list-title" style="margin: 0;">Nalagam...</h2>
+            <button id="clear-completed-btn" class="btn-secondary btn-small" style="background-color: #6c757d; color: white;">Počisti opravljeno</button>
+        </div>
+        
+        <ul id="items-container"></ul>
+    </div>
+
+    <script>
+        const username = localStorage.getItem('username');
+        if (!username) window.location.href = '/';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const listId = urlParams.get('id');
+        let currentItems = [];
+
+        if (!listId) window.location.href = '/dashboard';
+
+        async function fetchListDetails() {
+            const res = await fetch(`/api/lists/${listId}`, { 
+                headers: { 'Username': username } 
+            });
+            if (res.ok) {
+                const listData = await res.json();
+                document.getElementById('list-title').innerText = listData.name;
+                currentItems = listData.items || [];
+                renderItems();
+            } else {
+                window.location.href = '/dashboard';
+            }
+        }
+
+        async function saveItems() {
+            await fetch(`/api/lists/${listId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Username': username },
+                body: JSON.stringify({ items: currentItems })
+            });
+        }
+
+        function renderItems() {
+            const container = document.getElementById('items-container');
+            container.innerHTML = "";
+            
+            if (currentItems.length === 0) {
+                container.innerHTML = "<p style='text-align:center; color: #888;'>Seznam je prazen. Pojdi na 'Uredi', da dodaš stvari.</p>";
+                return;
+            }
+
+            currentItems.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = "task-item"; 
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = item.done; 
+                
+                const textSpan = document.createElement('span');
+                textSpan.className = "task-text";
+                textSpan.innerText = item.text;
+
+                // Dogodek ob kliku na checkbox
+                checkbox.onchange = (e) => {
+                    currentItems[index].done = e.target.checked;
+                    saveItems();
+                    // Ni potreben celoten renderItems(), ker CSS poskrbi za vizualne spremembe
+                };
+
+                // Omogočimo klik na celo vrstico (kartico) za preklop
+                li.onclick = (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        currentItems[index].done = checkbox.checked;
+                        saveItems();
+                    }
+                };
+                
+                li.appendChild(checkbox);
+                li.appendChild(textSpan);
+                container.appendChild(li);
+            });
+        }
+
+        document.getElementById('clear-completed-btn').addEventListener('click', () => {
+            if (confirm("Odstranim vse opravljene stvari?")) {
+                currentItems = currentItems.filter(item => !item.done);
+                renderItems();
+                saveItems();
+            }
+        });
+
+        fetchListDetails();
+    </script>
+</body>
+</html>

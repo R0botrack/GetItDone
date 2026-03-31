@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>Prijava</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2 style="text-align: center;">Prijava</h2>
+        <form id="login-form">
+            <input type="text" id="username" placeholder="Uporabniško ime" required>
+            <input type="password" id="password" placeholder="Geslo" required>
+            <button type="submit">Prijavi me</button>
+        </form>
+        <p id="message"></p>
+        <p class="toggle-text">Nimaš računa? <a href="/register">Registriraj se</a></p>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('message');
+
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (res.ok) {
+                localStorage.setItem('username', username);
+                window.location.href = '/dashboard';
+            } else {
+                const data = await res.json();
+                msg.style.color = "red";
+                msg.innerText = data.error;
+            }
+        });
+    </script>
+</body>
+</html>

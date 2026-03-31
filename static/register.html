@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>Registracija</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Registracija</h2>
+        <form id="register-form">
+            <input type="text" id="username" placeholder="Uporabniško ime" required>
+            <input type="password" id="password" placeholder="Geslo" required>
+            <button type="submit">Registriraj se</button>
+        </form>
+        <p id="message"></p>
+        <p class="toggle-text">Že imaš račun? <a href="/">Prijavi se</a></p>
+    </div>
+
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('message');
+
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (res.ok) {
+                msg.style.color = "green";
+                msg.innerText = "Registracija uspešna! Preusmerjam na prijavo...";
+                setTimeout(() => window.location.href = '/', 1500);
+            } else {
+                const data = await res.json();
+                msg.style.color = "red";
+                msg.innerText = data.error;
+            }
+        });
+    </script>
+</body>
+</html>

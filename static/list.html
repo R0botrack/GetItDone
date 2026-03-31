@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>Urejanje Seznama</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="nav-link">← Nazaj na vse sezname</a>
+        <h2 id="list-title">Nalagam...</h2>
+        
+        <div class="input-group">
+            <input type="text" id="new-item" placeholder="Novo opravilo/izdelek">
+            <button id="add-item-btn" class="btn-secondary">Dodaj</button>
+        </div>
+
+        <ul id="items-container"></ul>
+    </div>
+
+    <script>
+        const username = localStorage.getItem('username');
+        if (!username) window.location.href = '/';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const listId = urlParams.get('id');
+        let currentItems = [];
+
+        if (!listId) window.location.href = '/dashboard';
+
+        async function fetchListDetails() {
+            const res = await fetch(`/api/lists/${listId}`, { headers: { 'Username': username } });
+            if (res.ok) {
+                const listData = await res.json();
+                document.getElementById('list-title').innerText = "Urejanje: " + listData.name;
+                currentItems = listData.items;
+                renderItems();
+            } else {
+                window.location.href = '/dashboard';
+            }
+        }
+
+        async function saveItems() {
+            await fetch(`/api/lists/${listId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Username': username },
+                body: JSON.stringify({ items: currentItems })
+            });
+        }
+
+        function renderItems() {
+            const container = document.getElementById('items-container');
+            container.innerHTML = "";
+            
+            currentItems.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.innerText = item.text; 
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerText = "Odstrani";
+                deleteBtn.className = "delete-btn btn-small";
+                deleteBtn.onclick = () => {
+                    currentItems.splice(index, 1);
+                    renderItems();
+                    saveItems();
+                };
+                
+                li.appendChild(deleteBtn);
+                container.appendChild(li);
+            });
+        }
+
+        document.getElementById('add-item-btn').addEventListener('click', () => {
+            const val = document.getElementById('new-item').value.trim();
+            if (val) {
+                currentItems.push({ text: val, done: false }); 
+                document.getElementById('new-item').value = "";
+                renderItems();
+                saveItems();
+            }
+        });
+
+        fetchListDetails();
+    </script>
+</body>
+</html>
