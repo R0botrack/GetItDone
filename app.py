@@ -2,6 +2,13 @@ from flask import Flask, request, jsonify, send_from_directory
 import json
 import os
 import uuid
+from supabase import create_client, Client
+
+url = "YOUR_SUPABASE_URL"
+key = "YOUR_SUPABASE_ANON_KEY"
+supabase: Client = create_client(url, key)
+
+
 
 app = Flask(__name__, static_folder='static')
 DATA_FILE = 'data.json'
@@ -42,26 +49,33 @@ def serve_static(path):
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
-    data = load_data()
     req = request.json
     username = req.get('username')
     password = req.get('password')
-    
-    if username in data:
+
+    # Check if user exists
+    user_check = supabase.table("users").select("*").eq("username", username).execute()
+    if user_check.data:
         return jsonify({"error": "Uporabnik s tem imenom že obstaja!"}), 400
-        
-    data[username] = {"password": password, "lists": {}}
-    save_data(data)
+
+    # Insert new user
+    supabase.table("users").insert({
+        "username": username, 
+        "password": password, 
+        "lists": {}
+    }).execute()
+    
     return jsonify({"message": "Registracija uspešna!"})
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    data = load_data()
     req = request.json
     username = req.get('username')
     password = req.get('password')
+
+    user = supabase.table("users").select("*").eq("username", username).eq("password", password).execute()
     
-    if username in data and data[username]["password"] == password:
+    if user.data:
         return jsonify({"message": "Prijava uspešna!"})
         
     return jsonify({"error": "Napačno uporabniško ime ali geslo!"}), 401
